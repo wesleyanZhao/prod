@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">  
+<mapper namespace="com.lanou.cn.mapper.ProductMapper">
+
+    <insert id="addProduct" parameterType="Map">
+        INSERT INTO
+          prd_bsc (
+            prd_no
+            ,prd_name
+            ,prd_code
+            ,tp_cd
+            ,img_url
+            ,sup_id
+            ,sh_date
+            ,is_sales
+            ,is_gifts
+            ,is_bind
+            ,is_pre_sale
+            ,sale_code
+            ,is_return
+            ,is_used
+            ,inst_date
+            ,inst_id
+          )
+        VALUES
+          (
+            (SELECT prd.no FROM (SELECT concat('100',ifnull(max(id),0) + 1) no FROM prd_bsc) prd)
+            ,#{prdName}
+            ,#{prdCode}
+            ,(SELECT tp_cd FROM prd_type WHERE tp_name=#{prdType})
+            ,#{prdImg}
+            ,(SELECT id FROM sup_info WHERE sup_name=#{supName})
+            ,#{shDate}
+            ,#{isSales}
+            ,#{isGifts}
+            ,#{isBind}
+            ,#{isPreSale}
+            ,#{saleCode}
+            ,#{isReturn}
+            ,#{isUsed}
+            ,(SELECT now())
+            ,(SELECT id FROM users WHERE username=#{username})
+          )
+    </insert>
+
+   <select id="getPrdType" resultType="Map">
+     SELECT
+      id
+      ,tp_cd tpCd
+      ,tp_name tpNm
+      ,is_used isUsed
+     FROM
+      prd_type
+   </select>
+
+  <select id="getSupInfo" resultType="Map">
+    SELECT
+      id
+      ,sup_name supName
+      ,sup_comp supComp
+      ,sup_addr supAddr
+      ,sup_level supLevel
+      ,cp_relation cpRelation
+      ,is_used isUsed
+    FROM
+      sup_info
+  </select>
+
+  <select id="getAllProduct" parameterType="Map" resultType="Map">
+    SELECT
+    prd.id
+    ,prd.prd_no prdNo
+    ,prd.prd_name prdName
+    ,prd.prd_code prdCode
+    ,prd.tp_cd tpCd
+    ,tp.tp_name tpNm
+    ,sup.sup_name supName
+    ,sup.sup_comp supComp
+    ,prd.sh_date shDate
+    ,prd.is_sales isSales
+    ,prd.is_gifts isGifts
+    ,prd.is_bind isBind
+    ,prd.is_pre_sale isPreSale
+    ,prd.sale_code saleCode
+    ,prd.is_return isReturn
+    ,prd.is_used isUsed
+    --       ,inst_date instDate
+    --       ,inst_id instId
+    --       ,mdf_date mdfDate
+    --       ,mdf_id mdfId
+    FROM
+    prd_bsc prd,sup_info sup,prd_type tp
+    <!--<if test="null != salePriceBegin and '' != salePriceBegin and null != salePriceEnd and '' != salePriceEnd">
+      ,(
+      SELECT prd_no FROM prd_dtl
+      WHERE 1=1
+      <if test="null != salePriceBegin and '' != salePriceBegin">
+        <![CDATA[ AND sale_price>=#{salePriceBegin} ]]>
+      </if>
+      <if test="null != salePriceEnd and '' != salePriceEnd">
+        <![CDATA[ AND sale_price<=#{salePriceEnd}]]>
+      </if>
+      ) dtl
+    </if>-->
+    WHERE 1=1
+    AND prd.sup_id=sup.id
+    AND prd.tp_cd=tp.tp_cd
+    <!--<if test="null != salePriceBegin and '' != salePriceBegin and null != salePriceEnd and '' != salePriceEnd">
+      AND dtl.prd_no=prd.prd_no
+    </if>-->
+    <!--<if test="null != tpCd and '' != tpCd">-->
+    <!--AND tp_cd=#{tpCd}-->
+    <!--</if>-->
+    <if test="null != id and '' != id">
+      AND prd.id=#{id}
+    </if>
+    <if test="null != shDateBegin and '' != shDateBegin ">
+      AND <![CDATA[ prd.sh_date>=#{shDateBegin} ]]>
+    </if>
+    <if test="null != shDateEnd and '' != shDateEnd">
+      AND <![CDATA[ prd.sh_date<=#{shDateEnd} ]]>
+    </if>
+    <if test="null != prdName and '' != prdName">
+      AND prd.prd_name=#{prdName}
+    </if>
+    <if test="null != isSales and '' != isSales and ' '.toString() != isSales">
+      AND prd.is_sales=#{isSales}
+    </if>
+    <if test="null != isGifts and '' != isGifts and ' '.toString() != isGifts">
+      AND prd.is_gifts=#{isGifts}
+    </if>
+    <if test="null != isBind and '' != isBind and ' '.toString() != isBind">
+      AND prd.is_bind=#{isBind}
+    </if>
+    <if test="null != prdCode and '' != prdCode">
+      AND prd.prd_code=#{prdCode}
+    </if>
+    <if test="null != isPreSale and '' != isPreSale and ' '.toString() != isPreSale">
+      AND prd.is_pre_sale=#{isPreSale}
+    </if>
+    <if test="null != isReturn and '' != isReturn and ' '.toString() != isReturn">
+      AND prd.is_return=#{isReturn}
+    </if>
+    <if test="null != prdType and '' != prdType and ' '.toString() != prdType">
+      AND tp.tp_name=#{prdType}
+    </if>
+    <if test="null != saleCode and '' != saleCode and ' '.toString() != saleCode">
+      AND prd.sale_code=#{saleCode}
+    </if>
+    <if test="null != isUsed and '' != isUsed and ' '.toString() != isUsed">
+      AND prd.is_used=#{isUsed}
+    </if>
+    <if test="null != supName and '' != supName and ' '.toString() != supName">
+      AND prd.sup_id=(SELECT id FROM sup_info WHERE sup_name=#{supName})
+    </if>
+    <if test="null != prdNo and '' != prdNo">
+      AND prd.prd_no=#{prdNo}
+    </if>
+    ORDER BY id ASC
+  </select>
+
+  <select id="getWare" parameterType="Map" resultType="Map">
+    SELECT
+      w.id id
+      ,w.w_no wNo
+      ,w.w_name wName
+      ,w.w_addr wAddr
+      ,w.is_used isUsed
+      ,w.w_type wType
+      ,w.tms_no tmsNo
+    FROM
+      (
+        SELECT
+          w_type wType
+        FROM
+          prd_tp_w_r
+        WHERE
+          is_used='y' AND prd_type=#{tpCd}
+      ) r
+      ,ware_info w
+    WHERE
+      w.w_type=r.wType
+  </select>
+
+  <insert id="addDetail" parameterType="Map">
+    <selectKey resultType="Integer" order="AFTER" keyProperty="id">
+        SELECT LAST_INSERT_ID() as id
+    </selectKey>
+    INSERT INTO
+      prd_dtl
+        (
+          prd_no
+          ,prd_dtl_no
+          ,prd_dtl_name
+          ,img_url
+          ,ctrl_rate
+          ,ipt_price
+          ,sale_price
+          ,is_used
+          ,inst_date
+          ,inst_id
+        )
+      VALUES
+        (
+          #{prdNo}
+          ,(SELECT prd.no FROM (SELECT concat(#{prdNo},ifnull(max(id),0) + 1) no FROM prd_dtl) prd)
+          ,#{prdDtlName}
+          ,#{imgUrl}
+          ,0.3
+          ,#{iptPrice}
+          ,#{salePrice}
+          ,#{isUsed}
+          ,now()
+          ,(SELECT id FROM users WHERE username=#{username})
+        )
+  </insert>
+  
+  <insert id="addWarePrdRel" parameterType="Map">
+    INSERT INTO
+      ware_prd_r
+        (
+          prd_no
+          ,prd_dtl_no
+          ,w_no
+          ,w_count
+          ,w_occupy_count
+          ,is_used
+          ,inst_date
+          ,inst_id
+        )
+    VALUES
+      (
+        #{prdNo}
+        ,(SELECT prd_dtl_no FROM prd_dtl WHERE id=#{id})
+        ,#{wNo}
+        ,#{wCount}
+        ,0
+        ,#{isUsed}
+        ,now()
+        ,(SELECT id FROM users WHERE username=#{username})
+      )
+  </insert>
+
+    <select id="getDetailed" resultType="Map">
+        SELECT
+          dtl_r.id id
+          ,dtl_r.imgUrl imgUrl
+          ,dtl_r.prdDtlName prdDtlName
+          ,dtl_r.prdDtlNo prdDtlNo
+          ,dtl_r.ctrlRate ctrlRate
+          ,dtl_r.iptPrice iptPrice
+          ,dtl_r.salePrice salePrice
+          ,dtl_r.isUsed isUsed
+          ,dtl_r.w_count wCount
+          ,ware.w_name wName
+          ,ware.w_addr wAddr
+          ,bsc.prd_name prdName
+          ,dtl_r.w_no wNo
+        FROM
+          (
+            SELECT
+              dtl.id id
+              ,dtl.prd_no prdNo
+              ,dtl.prd_dtl_no prdDtlNo
+              ,dtl.prd_dtl_name prdDtlName
+              ,dtl.img_url imgUrl
+              ,dtl.ctrl_rate ctrlRate
+              ,dtl.ipt_price iptPrice
+              ,dtl.sale_price salePrice
+              ,dtl.is_used isUsed
+              ,r.w_count w_count
+              ,r.w_no w_no
+            FROM
+              prd_dtl dtl,ware_prd_r r
+            WHERE
+              dtl.prd_dtl_no=r.prd_dtl_no
+              AND r.w_count>0
+              <if test="null != prdNo and '' != prdNo">
+                AND dtl.prd_no=#{prdNo}
+              </if>
+              <if test="null != prdDtlName and '' != prdDtlName">
+                AND dtl.prd_dtl_name=#{prdDtlName}
+              </if>
+              <if test="null != salePriceBegin and '' != salePriceBegin">
+                <![CDATA[ AND dtl.sale_price>=#{salePriceBegin} ]]>
+              </if>
+              <if test="null != salePriceEnd and '' != salePriceEnd">
+                <![CDATA[ AND dtl.sale_price<=#{salePriceEnd}]]>
+              </if>
+              <if test="null != wCountBegin and '' != wCountBegin">
+                <![CDATA[ AND r.w_count>=#{wCountBegin}]]>
+              </if>
+              <if test="null != wCountEnd and '' != wCountEnd">
+                <![CDATA[ AND r.w_count<=#{wCountEnd}]]>
+              </if>
+              <if test="null != isUsed and '' != isUsed and ' '.toString() != isUsed">
+                AND dtl.is_used=#{isUsed}
+              </if>
+          ) dtl_r
+          ,ware_info ware,prd_bsc bsc
+        WHERE
+          ware.w_no=dtl_r.w_no
+          AND dtl_r.prdNo=bsc.prd_no
+          <if test="null != prdName and '' != prdName">
+            AND bsc.prd_name=#{prdName}
+          </if>
+          <if test="null != wAddrName and '' != wAddrName">
+            AND ware.w_name=#{wAddrName}
+          </if>
+        ORDER BY id ASC
+    </select>
+
+    <select id="getModifyDetailed" parameterType="Map" resultType="Map">
+      SELECT
+        dtlr.prdDtlNo prdDtlNo
+        ,dtlr.prdDtlName prdDtlName
+        ,dtlr.imgUrl imgUrl
+        ,dtlr.ctrlRate ctrlRate
+        ,dtlr.salePrice salePrice
+        ,dtlr.isUsed isUsed
+        ,dtlr.wNo wNo
+        ,w.w_addr wAddr
+        ,w.w_name wName
+        ,dtlr.wCount wCount
+      FROM
+        (
+          SELECT
+            dtl.prd_dtl_no prdDtlNo
+            ,dtl.prd_dtl_name prdDtlName
+            ,dtl.img_url imgUrl
+            ,dtl.ctrl_rate ctrlRate
+            ,dtl.sale_price salePrice
+            ,dtl.is_used isUsed
+            ,r.w_no wNo
+            ,r.w_count wCount
+          FROM
+            (
+              SELECT
+                prd_dtl_no
+                ,prd_dtl_name
+                ,img_url
+                ,ctrl_rate
+                ,sale_price
+                ,is_used
+              FROM
+                prd_dtl
+              WHERE
+                prd_dtl_no=#{prdDtlNo}
+            ) dtl, ware_prd_r r
+          WHERE
+            r.prd_dtl_no=dtl.prd_dtl_no
+        ) dtlr,
+        (
+          SELECT
+            w_no
+            ,w_name
+            ,w_addr
+          FROM
+            ware_info
+          WHERE
+            w_no=#{wNo}
+        ) w
+      WHERE
+        dtlr.wNo=w.w_no
+    </select>
+
+  <!--<select id="getModifyDetailed" parameterType="Map" resultType="Map">-->
+    <!--SELECT-->
+      <!--dtlr.prd_dtl_no prdDtlNo-->
+      <!--,dtlr.prd_dtl_name prdDtlName-->
+      <!--,dtlr.img_url imgUrl-->
+      <!--,dtlr.sale_price salePrice-->
+      <!--,dtlr.is_used isUsed-->
+      <!--,dtlr.w_count wCount-->
+      <!--,dtlr.w_no wNo-->
+      <!--,ware.w_name wName-->
+      <!--,ware.w_addr wAddr-->
+      <!--,ware.is_used wIsUsed-->
+    <!--FROM-->
+      <!--(-->
+      <!--SELECT-->
+        <!--dtl.prd_dtl_no prd_dtl_no-->
+        <!--,dtl.prd_dtl_name prd_dtl_name-->
+        <!--,dtl.img_url img_url-->
+        <!--,dtl.sale_price sale_price-->
+        <!--,dtl.is_used is_used-->
+        <!--,r.w_count w_count-->
+        <!--,r.w_no w_no-->
+      <!--FROM-->
+        <!--(SELECT-->
+          <!--prd_dtl_no-->
+          <!--,prd_dtl_name-->
+          <!--,img_url-->
+          <!--,ctrl_rate-->
+          <!--,sale_price-->
+          <!--,is_used-->
+        <!--FROM-->
+          <!--prd_dtl-->
+        <!--WHERE-->
+          <!--prd_dtl_no=#{prdDtlNo}-->
+        <!--) dtl,ware_prd_r r-->
+      <!--WHERE-->
+        <!--dtl.prd_dtl_no=r.prd_dtl_no-->
+      <!--)dtlr,ware_info ware-->
+    <!--WHERE-->
+      <!--ware.w_no=dtlr.w_no-->
+  <!--</select>-->
+
+  <update id="saveModifyDetailed" parameterType="Map">
+    UPDATE prd_dtl
+    SET img_url=#{imgUrl},ctrl_rate=#{ctrlRate},sale_price=#{salePrice},is_used=#{isUsed}
+    WHERE prd_dtl_no=#{prdDtlNo}
+  </update>
+
+  <update id="saveModifyWare" parameterType="Map">
+    UPDATE ware_prd_r
+    SET w_count=#{wCount}
+    WHERE w_no=#{wNo}
+  </update>
+</mapper>  

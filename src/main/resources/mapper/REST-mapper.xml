@@ -1,0 +1,466 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">  
+<mapper namespace="com.lanou.cn.mapper.RESTMapper">
+
+    <select id="getDetailedProduct" parameterType="Map" resultType="Map">
+        SELECT
+            r.w_count wCount
+            ,dt.prd_dtl_name prdDtlName
+            ,dt.img_url imgUrl
+            ,dt.prd_dtl_no prdDtlNo
+            ,dt.prd_name prdName
+            ,dt.sale_price salePrice
+        FROM
+            (
+                SELECT
+                    sum(w_count) w_count,prd_dtl_no
+                FROM
+                    ware_prd_r
+                group by prd_dtl_no
+            ) r,
+            (
+                SELECT
+                    dtl.prd_dtl_name
+                    ,bsc.prd_name
+                    ,dtl.prd_dtl_no
+                    ,dtl.sale_price
+                    ,dtl.img_url
+                FROM
+                    (
+                        SELECT
+                            prd_no,
+                            prd_name
+                        FROM
+                            prd_bsc
+                        WHERE
+                            id=#{id}
+                    ) bsc,
+                    prd_dtl dtl
+                WHERE
+                    bsc.prd_no=dtl.prd_no
+            )dt
+        WHERE
+            r.prd_dtl_no=dt.prd_dtl_no;
+    </select>
+
+    <select id="getProduct" resultType="Map" parameterType="Map">
+        SELECT
+            dtl.id AS id,
+            sum(w_count) AS wCount,
+            dtl.maxp AS maxPrice,
+            dtl.minp AS minPrice,
+            bsc.prd_name AS prdName,
+            bsc.img_url imgUrl
+        FROM
+        (
+            SELECT
+                pb.prd_no,
+                pb.id,
+                pd.prd_dtl_name,
+                pb.img_url,
+                pd.sale_price,
+                wpr.w_count,
+                (
+                    SELECT
+                        pbb.prd_name
+                    FROM
+                        prd_bsc pbb
+                    WHERE
+                        pd.prd_no = pbb.prd_no
+                ) prd_name,
+                (
+                    SELECT
+                        max(pdd.sale_price) max_price
+                    FROM
+                        prd_dtl pdd
+                    WHERE
+                        pb.prd_no = pdd.prd_no
+                ) maxp,
+                (
+                    SELECT
+                        min(pdd.sale_price) min_price
+                    FROM
+                        prd_dtl pdd
+                    WHERE
+                        pb.prd_no = pdd.prd_no
+                ) minp
+            FROM
+                prd_dtl pd,
+                ware_prd_r wpr,
+                prd_bsc pb
+            WHERE
+                pd.is_used = 'y'
+            AND
+                wpr.prd_dtl_no = pd.prd_dtl_no
+            AND
+                pb.prd_no = pd.prd_no
+
+        <if test="null != params.prdName and '' != params.prdName">
+            AND pb.prd_name like CONCAT('%',#{params.prdName},'%')
+        </if>
+            <!--<if test="null != params.prdName and '' != params.prdName">
+            </if>-->
+            <if test="null != params.tpCd and '' != params.tpCd">
+                AND pb.tp_cd=#{params.tpCd}
+            </if>
+        ) dtl,prd_bsc bsc
+        WHERE
+            dtl.prd_no=bsc.prd_no
+        <if test="null != params.salePriceBegin and '' != params.salePriceBegin">
+            <![CDATA[ AND dtl.maxp>=#{params.salePriceBegin}]]>
+        </if>
+        <if test="null != params.salePriceEnd and '' != params.salePriceEnd">
+            <![CDATA[ AND dtl.minp<=#{params.salePriceEnd}]]>
+        </if>
+        GROUP BY
+             bsc.prd_name
+            ,dtl.id
+            ,bsc.img_url
+    </select>
+
+    <select id="getType" parameterType="Map" resultType="Map">
+        SELECT
+          tp.tp_name AS tpNm
+          ,tp.tp_cd AS tpCd
+        FROM
+          prd_type tp
+        WHERE
+          tp.is_used='y'
+          <if test="null != tpCd and '' != tpCd">
+              AND tp.tp_cd=#{tpCd}
+          </if>
+    </select>
+
+    <select id="getAllType" parameterType="Map" resultType="Map">
+        SELECT
+          tp_name tpNm
+          ,tp_cd tpCd
+        FROM
+          prd_type
+        WHERE
+          is_used='y'
+    </select>
+
+    <update id="lock" parameterType="Map">
+        UPDATE
+          ware_prd_r
+        SET w_occupy_count=w_occupy_count
+        WHERE id IN (SELECT a.id FROM (SELECT id FROM ware_prd_r WHERE prd_dtl_no=#{prdDtlNo}) a)
+    </update>
+
+    <!--<select id="getWCountTotal" parameterType="Map" resultType="Map">
+        SELECT
+          sum(w_count) wCount
+          ,sum(w_occupy_count) wOccupyCount
+          ,prd_dtl_no prdDtlNo
+        FROM
+          ware_prd_r
+        GROUP BY
+          prd_dtl_no
+        HAVING
+          prd_dtl_no=#{prdDtlNo}
+    </select>-->
+
+    <select id="getWare" parameterType="Map" resultType="Map">
+        SELECT
+          id
+          ,prd_no prdNo
+          ,w_no wNo
+          ,w_count wCount
+          ,w_occupy_count wOccupyCount
+        FROM
+          ware_prd_r
+        WHERE
+          prd_dtl_no=#{prdDtlNo}
+    </select>
+
+    <update id="addOccupy" parameterType="Map">
+        UPDATE ware_prd_r
+        SET w_occupy_count=#{num}
+        WHERE id=#{id}
+    </update>
+
+    <update id="updateWOccupyCount" parameterType="Map">
+        UPDATE
+        ware_prd_r
+        SET
+        w_count = w_count+#{prdNum}
+        WHERE id = #{id}
+    </update>
+
+    <update id="diffWare" parameterType="Map">
+        UPDATE
+          ware_prd_r
+        SET w_count=w_count-#{prdNum}
+        WHERE id=#{id}
+    </update>
+
+    <select id="getGifts" resultType="Map">
+        SELECT
+          prd_no prdNo
+          ,prd_name prdName
+        FROM
+          prd_bsc
+        WHERE
+          is_used='y'
+          <if test="null != tpCd and '' != tpCd">
+              AND tp_cd=#{tpCd}
+          </if>
+          <if test="null != isGifts and '' != isGifts and 'Yes'.toString() == isGifts">
+              AND is_gifts IN ('20','30')
+          </if>
+    </select>
+
+    <select id="getPrd" parameterType="Map" resultType="Map">
+        SELECT
+          dtl.prd_no prdNo
+          ,dtl.prd_dtl_name prdDtlName
+          ,dtl.prd_dtl_no prdDtlNo
+          ,bsc.prdName prdName
+          ,bsc.isReturn isReturn
+          ,dtl.ipt_price iptPrice
+          ,dtl.sale_price salePrice
+          ,bsc.tpCd tpCd
+          ,bsc.tpName tpName
+        FROM
+          prd_dtl dtl,
+          (
+            SELECT
+              pb.prd_name prdName
+              ,pb.prd_no prdNo
+              ,pb.tp_cd tpCd
+              ,(SELECT tp_name FROM prd_type tp WHERE tp.tp_cd=pb.tp_cd) tpName
+              ,pb.is_return isReturn
+            FROM
+              prd_bsc pb
+            WHERE
+              prd_no=#{prdNo}
+          ) bsc
+        WHERE
+          dtl.prd_no=bsc.prdNo
+    </select>
+
+    <select id="getDetailedForPlan" parameterType="Map" resultType="Map">
+        SELECT
+          prd_no prdNo
+          ,ctrl_rate ctrlRate
+          ,ipt_price iptPrice
+        FROM
+          prd_dtl
+        WHERE
+          prd_dtl_no=#{prdDtlNo}
+    </select>
+
+    <select id="getPrdDetailed" parameterType="Map" resultType="Map">
+        select
+            tp.tp_name tpName
+            ,tp.tp_cd tpCd
+            ,prd.prd_no prdNo
+            ,prd.prd_name prdName
+            ,prd.is_return isReturn
+            ,prd.img_url imgUrl
+            ,prd.prd_dtl_name prdDtlName
+            ,prd.prd_dtl_no prdDtlNo
+            ,prd.ipt_price iptPrice
+            ,prd.sale_price salePrice
+        from
+            prd_type tp,
+            (
+                select
+                    bsc.prd_no
+                    ,bsc.prd_name
+                    ,bsc.is_return
+                    ,bsc.tp_cd
+                    ,dtl.prd_dtl_no
+                    ,dtl.prd_dtl_name
+                    ,dtl.img_url
+                    ,dtl.ipt_price
+                    ,dtl.sale_price
+                from
+                    prd_bsc bsc,
+                    (
+                        select
+                            prd_no
+                            ,prd_dtl_no
+                            ,prd_dtl_name
+                            ,img_url
+                            ,ipt_price
+                            ,sale_price
+                        from
+                            prd_dtl
+                        where
+                            prd_dtl_no=#{prdDtlNo}
+                    ) dtl
+                where
+                    dtl.prd_no=bsc.prd_no
+            ) prd
+        WHERE
+            prd.tp_cd=tp.tp_cd
+    </select>
+
+    <update id="backCount" parameterType="Map">
+        UPDATE ware_prd_r
+        SET w_count=#{wCount}
+        WHERE id=#{id}
+    </update>
+
+    <update id="completePay" parameterType="Map">
+        UPDATE ware_prd_r
+        SET w_count=w_count-#{num},w_occupy_count=w_occupy_count-#{num}
+        WHERE w_no=#{wNo} AND prd_dtl_no=#{prdDtlNo}
+    </update>
+
+    <select id="getWareForComplete" parameterType="Map" resultType="Map">
+        SELECT
+            w_count wCount
+            ,w_occupy_count wOccupyCount
+        FROM
+            ware_prd_r
+        WHERE
+            w_no = #{wNo}
+        AND
+            prd_dtl_no = #{prdDtlNo}
+    </select>
+
+    <update id="cancelPayWCount" parameterType="Map">
+        UPDATE
+            ware_prd_r
+        SET
+          w_occupy_count = w_occupy_count-#{occCount}
+        WHERE
+            w_no = #{wNo}
+        AND
+            prd_dtl_no = #{prdDtlNo}
+    </update>
+
+    <select id="getPrdForPrdDtl" parameterType="Map" resultType="Map">
+        SELECT
+          prd_dtl_no prdDtlNo
+          ,prd_dtl_name prdDtlName
+        FROM
+          prd_dtl
+        WHERE
+          prd_no=(
+            SELECT
+              prd_no
+            FROM
+              prd_dtl
+            WHERE
+              prd_dtl_no=#{prdDtlNo}
+          )
+    </select>
+
+    <select id="getPrdComContent" parameterType="Map" resultType="Map">
+        SELECT
+             pc.vip_no vipNo
+            ,pd.prd_dtl_name prdDtlName
+            ,pc.cmm_level cmmLevel
+            ,pc.content content
+            ,pc.ord_sts_date ordStsDate
+        FROM
+             prd_bsc pb
+            ,prd_com pc
+            ,prd_dtl pd
+        WHERE
+            pb.id = #{id}
+        AND
+            pb.prd_no = pc.prd_no
+        AND
+            pc.prd_dtl_no = pd.prd_dtl_no
+    </select>
+
+    <select id="getPrdNoPrdDtlName" resultType="Map" parameterType="Map">
+        SELECT
+            pb.prd_no prdNo,
+            pd.prd_dtl_no prdDtlNo,
+            pd.prd_dtl_name prdDtlName
+        FROM
+            prd_bsc pb,
+            prd_dtl pd
+        WHERE
+            pb.id = #{id}
+        AND
+            pb.prd_no = pd.prd_no
+    </select>
+
+    <select id="findShopCar" resultType="Map" parameterType="Map">
+         SELECT
+             prd_dtl_no prdDtlNo
+            ,num
+        FROM
+            shop_cart
+        WHERE
+            vip_no=#{params.vipNo}
+        and
+            prd_dtl_no=#{params.prdDtlNo}
+    </select>
+
+    <update id="updateShopCar" parameterType="Map">
+        UPDATE
+            shop_cart
+        SET
+            num=#{params.newNum}
+        WHERE
+            vip_no=#{params.vipNo}
+        and
+            prd_dtl_no=#{params.prdDtlNo}
+    </update>
+
+    <insert id="addShopCar" parameterType="Map">
+        INSERT INTO shop_cart(
+             img_url
+            ,prd_dtl_name
+            ,sale_price
+            <if test="null != #{params.cpnContent} and '' != #{params.cpnContent} ">
+                ,cpn_content
+            </if>
+            ,prd_dtl_no
+            ,num
+            ,dpst_date
+            ,vip_no
+        )
+        VALUES(
+             #{params.phone}
+            ,#{params.prdDtlName}
+            ,#{params.salePrice}
+            <if test="null != #{params.cpnContent} and '' != #{params.cpnContent} ">
+                ,#{params.cpnContent}
+            </if>
+            ,#{params.prdDtlNo}
+            ,#{params.num}
+            ,now()
+            ,#{params.vipNo}
+        )
+    </insert>
+
+    <select id="getAllShop" resultType="Map">
+    SELECT
+         id
+        ,img_url phone
+        ,prd_dtl_name name
+        ,sale_price price
+        ,prd_dtl_no prdDtlNo
+        ,num
+    FROM
+        shop_cart
+    WHERE
+        vip_no=#{vipNo}
+    </select>
+
+    <delete id="deleteShopCar" parameterType="Map">
+        DELETE FROM
+            shop_cart
+        WHERE
+            id = #{id}
+    </delete>
+
+    <delete id="deleteAllShopCar" parameterType="Map">
+        DELETE FROM
+            shop_cart
+        WHERE
+            vip_no = #{vipNo}
+    </delete>
+
+</mapper>
